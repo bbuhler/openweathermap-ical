@@ -14,6 +14,9 @@ const icons = {
   '50d': '🌫️️️',
 };
 
+const trimLines = (strings, ...args) =>
+  strings.map((line, index) => line.replace(/\n[ ]+/g, '\n') + (args[index] || '')).join('');
+
 polka()
   .get('/', async (req, res) => {
     console.log(req.query);
@@ -21,6 +24,7 @@ polka()
     try {
       const lang = req.query.lang ? req.query.lang : 'en';
       const units = req.query.units ? req.query.units : 'imperial';
+      const title = lang === 'de' ? 'Wetter' : 'Weather';
 
       const {timezone, lat, lon, daily} = await request({
         url: `https://api.openweathermap.org/data/2.5/onecall${req.search}`,
@@ -35,7 +39,8 @@ polka()
       });
 
       const cal = iCal({
-        name: lang === 'de' ? 'Wetter' : 'Weather',
+        name: title,
+        description: title,
         domain: 'openweathermap.org',
         timezone,
         ttl: 60 * 60,
@@ -54,14 +59,16 @@ polka()
         cal.createEvent({
           allDay: true,
           start: date,
-          summary: `${icons[weather.icon]} ${weather.description} ${temperature(temp.max)} / ${temperature(temp.min)}`,
+          summary: `${icons[weather.icon]} ${temperature(temp.max)} / ${temperature(temp.min)} ${weather.description}`,
           location: `${lat},${lon}`,
           geo: {lat, lon},
-          description: `
-          Sonnenauf- & untergang: ${time(day.sunrise)} - ${time(day.sunset)}
-          UX-Index: ${day.uvi}
-          Luftfeuchtigkeit: ${day.humidity}%
-          Wind: ${day.wind_speed}${units === 'imperial' ? 'mph' : 'km/h'} (${day.wind_deg}°)`,
+          description: trimLines `
+          \u{1F32A}\u{FE0F} ${day.wind_speed}${units === 'imperial' ? 'mph' : 'km/h'} (${day.wind_deg}°)
+          
+          \u{1F304}\u{FE0F} ${time(day.sunrise)} \u{1F307}\u{FE0F} ${time(day.sunset)}
+          
+          UV-Index: ${day.uvi}
+          ${lang === 'de' ? 'Luftfeuchtigkeit' : 'Humidity'}: ${day.humidity}%`,
         });
       }
 
