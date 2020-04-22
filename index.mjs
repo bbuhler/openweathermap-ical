@@ -21,6 +21,12 @@ polka()
   .get('/', async (req, res) => {
     console.log(req.query);
 
+    if (!req.search && !req.query.appid && !req.query.lon && !req.query.lat)
+    {
+      res.statusCode = 400;
+      res.end('Missing required parameters.');
+    }
+
     try {
       const lang = req.query.lang ? req.query.lang : 'en';
       const units = req.query.units ? req.query.units : 'imperial';
@@ -76,6 +82,12 @@ polka()
       cal.serve(res);
     } catch (err) {
       console.error(err);
+
+      if (err.statusCode && err.error)
+      {
+        res.statusCode = err.statusCode;
+        res.end(err.error.message);
+      }
     }
   })
   .listen(3001)
