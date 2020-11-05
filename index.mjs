@@ -25,6 +25,7 @@ polka()
     {
       res.statusCode = 400;
       res.end('Missing required parameters.');
+      return;
     }
 
     try {
