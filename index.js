@@ -1,7 +1,7 @@
-import polka from 'polka';
-import request from 'request-promise-native';
-import iCal from 'ical-generator';
+import { serve } from 'https://deno.land/std@0.76.0/http/server.ts';
+import iCal from 'https://jspm.dev/ical-generator';
 
+const server = serve({port: 3001});
 const icons = {
   '01d': '☀️',
   '02d': '🌤️',
@@ -17,26 +17,26 @@ const icons = {
 const trimLines = (strings, ...args) =>
   strings.map((line, index) => line.replace(/\n[ ]+/g, '\n') + (args[index] || '')).join('');
 
-polka()
-  .get('/', async (req, res) => {
-    console.log(req.query);
 
-    if (!req.search && !req.query.appid && !req.query.lon && !req.query.lat)
-    {
-      res.statusCode = 400;
-      res.end('Missing required parameters.');
-      return;
+for await (const req of server) {
+  const url = new URL(req.url, 'http://' + req.headers.get('host'));
+
+  if (url.pathname === '/') {
+    if (!url.search && !url.searchParams.has('appid') && !url.searchParams.has('lon') && !url.searchParams.has('lat')) {
+      req.respond({
+        status: 400,
+        body: 'Missing required parameters.',
+      });
+      break;
     }
 
     try {
-      const lang = req.query.lang ? req.query.lang : 'en';
-      const units = req.query.units ? req.query.units : 'imperial';
+      const lang = url.searchParams.get('lang') || 'en';
+      const units = url.searchParams.get('units') || 'imperial';
       const title = lang === 'de' ? 'Wetter' : 'Weather';
 
-      const {timezone, lat, lon, daily} = await request({
-        url: `https://api.openweathermap.org/data/2.5/onecall${req.search}`,
-        json: true,
-      });
+      const response = await fetch(`https://api.openweathermap.org/data/2.5/onecall${url.search}`);
+      const {timezone, lat, lon, daily} = await response.json();
 
       const temperature = temp => `${Math.round(temp)}°${units === 'imperial' ? 'F' : 'C'}`;
       const time = ts => new Date(ts * 1000).toLocaleTimeString(lang, {
@@ -69,27 +69,31 @@ polka()
           summary: `${icons[weather.icon]} ${temperature(temp.max)} / ${temperature(temp.min)} ${weather.description}`,
           location: `${lat},${lon}`,
           geo: {lat, lon},
-          description: trimLines `
+          description: trimLines`
           \u{1F32A}\u{FE0F} ${day.wind_speed}${units === 'imperial' ? 'mph' : 'km/h'} (${day.wind_deg}°)
-          
+
           \u{1F304}\u{FE0F} ${time(day.sunrise)} \u{1F307}\u{FE0F} ${time(day.sunset)}
-          
+
           UV-Index: ${day.uvi}
           ${lang === 'de' ? 'Luftfeuchtigkeit' : 'Humidity'}: ${day.humidity}%`,
         });
       }
 
-      // console.log(cal.toString());
-      cal.serve(res);
+      req.respond({
+        headers: new Headers([
+          ['content-type', 'text/calendar'],
+        ]),
+        body: cal.toString(),
+      });
     } catch (err) {
       console.error(err);
 
-      if (err.statusCode && err.error)
-      {
-        res.statusCode = err.statusCode;
-        res.end(err.error.message);
+      if (err.statusCode && err.error) {
+        req.respond({
+          status: err.statusCode,
+          body: err.error.message,
+        });
       }
     }
-  })
-  .listen(3001)
-;
+  }
+}

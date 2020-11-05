@@ -1,11 +1,13 @@
-FROM node:14-slim
+FROM hayd/alpine-deno:1.5.0
 
 WORKDIR /app
 
-COPY ./ ./
+USER deno
 
-RUN npm ci
+ADD . .
 
-CMD ["node", "index.mjs"]
+RUN deno cache index.js
+
+CMD ["run", "--allow-net", "index.js"]
 
 EXPOSE 3001

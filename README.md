@@ -4,7 +4,7 @@ Creates an iCal with weather forecast from OpenWeatherMap.
 
 ## Run
 ```
-node --experimental-modules index.mjs
+deno run --allow-net index.js
 ```
 
 ## Usage
