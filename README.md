@@ -9,3 +9,7 @@ node --experimental-modules index.mjs
 
 ## Usage
 To use it just call the root entry point of the server with same parameters as for [onecall API](https://openweathermap.org/api/one-call-api) of OpenWeatherMap.
+
+## Deno instead NodeJS
+
+Checkout the [deno branch](https://github.com/bbuhler/openweathermap-ical/tree/deno).
